@@ -8,7 +8,7 @@ from notes.forms import NoteForm
 User = get_user_model()
 
 
-class TestRoutes(TestCase):
+class TestContent1(TestCase):
 
     @classmethod
     def setUpTestData(cls):
@@ -62,6 +62,32 @@ class TestRoutes(TestCase):
                     self.assertEqual(note.title, e.title)
                     self.assertEqual(note.slug, e.slug)
 
+
+class TestContent2(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        
+        cls.author = User.objects.create(username='Лев Толстой')
+        cls.note = Note.objects.create(title="title", text="text", slug="slug", author=cls.author)
+        cls.reader = User.objects.create(username='Пушкин')
+     
+    def test_note_in_list_for_author(self):
+        """Заметка передаётся на страницу со списком заметок."""
+        self.client.force_login(self.author)
+        response = self.client.get(reverse('notes:list'))
+        self.assertEqual(Note.objects.count(), len(response.context['object_list']))
+        note_db, note_web = Note.objects.get(slug=self.note.slug), response.context['object_list'][0]
+        self.assertEqual(note_db.text, note_web.text)
+        self.assertEqual(note_db.title, note_web.title)
+        self.assertEqual(note_db.slug, note_web.slug)
+        self.assertEqual(note_db.author, note_web.author)
+
     def test_note_not_in_list_for_another_user(self):
-        """В список заметок одного пользователя не попадают заметки другого."""
-        pass
+        url = reverse('notes:list')
+        self.client.force_login(self.reader)
+        response = self.client.get(url)
+        object_list = response.context['object_list']
+        # Проверяем, что заметки нет в контексте страницы:
+        print(self.note)
+        self.assertNotIn(self.note, object_list)
